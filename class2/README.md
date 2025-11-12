@@ -97,5 +97,3 @@ This contract has several significant flaws that prevent it from working as inte
     * The `owner`, `votingDuration`, and `winner` (in the struct) variables are all set but **never used** for any logic. The `CandidateWon` event is also never emitted. This is "dead code" that doesn't do anything.
 
 This contract is a good start for learning, but it would not work for a real-world election due to these issues.
-
-Would you like me to help you fix these bugs and improve the contract?
