@@ -128,4 +128,5 @@ contract VotingContract {
         candidates[id] = candidateToVote;
         emit userVoted(msg.sender, id, candidateToVote.name);
     }
+
 }
