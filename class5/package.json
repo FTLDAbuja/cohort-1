@@ -13,7 +13,10 @@
   },
   "scripts": {
     "build": "hardhat build",
-    "test": "hardhat test"
+    "test": "hardhat test",
+    "script": "hardhat run",
+    "keystore": "hardhat keystore set",
+    "deploy": "hardhat run scripts/deploy.ts --build-profile production --network liskSepolia"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.4.0"

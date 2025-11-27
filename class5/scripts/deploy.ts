@@ -1,23 +1,26 @@
 import { network } from "hardhat";
 import { parseEther } from "viem";
 
-
+const lisk_usdc = "0x0E82fDDAd51cc3ac12b69761C45bBCB9A2Bf3C83"
+const lisk_usdt = "0x0E82fDDAd51cc3ac12b69761C45bBCB9A2Bf3C83"
 /**
- * Deploys to base sepolia testnet network
+ * Deploys to lisk sepolia testnet network
  * USDC: 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913
  * USDT: 0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2
  */
 
-const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
-const usdt = "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2";
+const base_usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+const base_usdt = "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2";
 async function main() {
-    const { viem } = await network.connect({
-        network: "baseSepolia",
+    const { viem, networkName } = await network.connect({
+        network: "liskSepolia",
         chainType: "op",
     });
     const [deployer] = await viem.getWalletClients();
     const publicClient = await viem.getPublicClient();
 
+    const deployerBalance = await publicClient.getBalance({ address: deployer.account.address })
+    console.log(`Deployer's balance in ${networkName} is ${Number(deployerBalance) * 10 ** -18} ETH`)
     console.log("Deploying contracts with account:", deployer.account.address);
 
     // Deploy USDC
@@ -33,17 +36,21 @@ async function main() {
     // console.log("USDT deployed to:", usdt.address);
 
     // Deploy GameRoomContract
-    console.log("Deploying GameRoomContract...");
-    const gameRoom = await viem.deployContract("GameRoomContract", [
-        usdt,
-        usdc,
-    ]);
-    await publicClient.waitForTransactionReceipt({ hash: gameRoom.address as any });
-    console.log("GameRoomContract deployed to:", gameRoom.address);
+    // console.log("Deploying GameRoomContract...");
+    // const gameRoom = await viem.deployContract("GameRoomContract", [
+    //     lisk_usdt,
+    //     lisk_usdc
+    // ]);
+    // console.log("Smart contract address => ", gameRoom.address);
+    // Deployed address is 0xb2d2d604ee045bb98ddab5cda63bf2491aa346be
+    // console.log("GameRoomContract deployed to:", gameRoom.address);
+
+    const deployedContract = await viem.getContractAt("GameRoomContract", "0xb2d2d604ee045bb98ddab5cda63bf2491aa346be");
+    console.log(deployedContract.address);
 
     // Optionally mint tokens to deployer for testing
-    console.log("\nMinting tokens to deployer for testing...");
-    const mintAmount = parseEther("100000");
+    // console.log("\nMinting tokens to deployer for testing...");
+    // const mintAmount = parseEther("100000");
 
     // const mintUsdcTx = await usdc.write.mint([deployer.account.address, mintAmount], {
     //     account: deployer.account,
@@ -60,7 +67,7 @@ async function main() {
     console.log("\n=== Deployment Summary ===");
     // console.log("USDC Address:", usdc.address);
     // console.log("USDT Address:", usdt.address);
-    console.log("GameRoomContract Address:", gameRoom.address);
+    // console.log("GameRoomContract Address:", gameRoom.address);
     console.log("Deployer Address:", deployer.account.address);
     console.log("\nDeployment completed successfully!");
 }
