@@ -1,57 +1,219 @@
-# Sample Hardhat 3 Beta Project (`node:test` and `viem`)
+MiniBank
 
-This project showcases a Hardhat 3 Beta project using the native Node.js test runner (`node:test`) and the `viem` library for Ethereum interactions.
+Overview
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+The MiniBank system contains three contracts — MiniBank, Beneficiary, and ExternalMathLib.
+They demonstrate interfaces, data-location rules, low-level calls, fallback/receive logic, and inter-contract communication.
 
-## Project Overview
 
-This example project includes:
+---
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using [`node:test`](nodejs.org/api/test.html), the new Node.js native test runner, and [`viem`](https://viem.sh/).
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+1. MiniBank.sol – Line-by-Line Explanation
 
-## Usage
+Pragma + Imports
 
-### Running Tests
+pragma solidity ^0.8.24;
+import "./IMiniBank.sol";
 
-To run all the tests in the project, execute the following command:
+Two directives define compiler version and import the interface so the bank contract formally implements required functions.
+This teaches interfaces and strict type expectations for external callers.
 
-```shell
-npx hardhat test
-```
 
-You can also selectively run the Solidity or `node:test` tests:
+---
 
-```shell
-npx hardhat test solidity
-npx hardhat test nodejs
-```
+State Variables
 
-### Make a deployment to Sepolia
+mapping(address => uint256) private balances;
+address public owner;
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
+balances is a mapping stored in storage so deposits permanently change blockchain state.
+owner tracks the administrator and demonstrates persistent state access.
 
-To run the deployment to a local chain:
 
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
-```
+---
 
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
+Events
 
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
+event Deposit(address indexed user, uint256 amount);
+event Withdrawal(address indexed user, uint256 amount);
+event LowLevelCallSuccess(bool success, bytes data);
 
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
+Events record deposits/withdrawals and expose low-level call debugging.
+Students learn indexed topics and ABI-encoded return data.
 
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-```
 
-After setting the variable, you can run the deployment with the Sepolia network:
+---
 
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
-```
+Constructor
+
+constructor() {
+    owner = msg.sender;
+}
+
+The deployer becomes the bank owner.
+This demonstrates initialization of storage variables.
+
+
+---
+
+Deposit Function
+
+function deposit() external payable override {
+    balances[msg.sender] += msg.value;
+    emit Deposit(msg.sender, msg.value);
+}
+
+msg.value shows ETH transfer and memory vs storage understanding, since mapping writes always hit storage.
+The emitted event confirms the transaction effect.
+
+
+---
+
+Withdraw Function
+
+function withdraw(uint256 amount) external override {
+    require(balances[msg.sender] >= amount, "Insufficient funds");
+
+    balances[msg.sender] -= amount;
+    payable(msg.sender).transfer(amount);
+
+    emit Withdrawal(msg.sender, amount);
+}
+
+The function demonstrates transfer, state updates, and checks-effects-interactions.
+It contrasts high-level ETH sending with low-level call.
+
+
+---
+
+Getter
+
+function getBalance(address user) external view returns (uint256) {
+    return balances[user];
+}
+
+A simple view function teaches view semantics and external visibility.
+No storage modifications occur.
+
+
+---
+
+Low-Level Call Example
+
+function tryExternalMath(address target, uint256 x) external {
+    (bool success, bytes memory data) = target.call(
+        abi.encodeWithSignature("double(uint256)", x)
+    );
+    emit LowLevelCallSuccess(success, data);
+}
+
+This teaches call(), manual ABI encoding, and why return data is untyped bytes.
+Students learn how failures do not automatically revert.
+
+
+---
+
+Fallback + Receive
+
+fallback() external payable {}
+receive() external payable {}
+
+receive handles plain ETH transfers, while fallback handles unknown function calls.
+This teaches the dispatch order: receive → fallback.
+
+
+---
+
+2. Beneficiary.sol – Line-by-Line Explanation
+
+State Variables
+
+address public lastSender;
+uint256 public lastValue;
+
+These store who invoked the contract and how much ETH was attached.
+It allows students to see how external calls modify state.
+
+
+---
+
+Function Called by the Bank
+
+function ping() external {
+    lastSender = msg.sender;
+}
+
+This teaches simple inter-contract communication.
+Students compare msg.sender under normal calls vs delegatecall.
+
+
+---
+
+Receive
+
+receive() external payable {
+    lastValue = msg.value;
+}
+
+This logs ETH received directly.
+Students observe that other contracts can trigger it.
+
+
+---
+
+3. ExternalMathLib.sol – Line-by-Line Explanation
+
+function double(uint256 x) external pure returns (uint256) {
+    return x * 2;
+}
+
+A pure function used only to demonstrate low-level ABI encoding.
+Students learn how external pure functions are invoked via call.
+
+
+---
+
+4. IMiniBank.sol – Line-by-Line Explanation
+
+interface IMiniBank {
+    function deposit() external payable;
+    function withdraw(uint256 amount) external;
+}
+
+Defines the public surface area the bank must implement.
+Teaches that interfaces contain no logic and are used for abstraction.
+
+
+---
+
+5. Project Structure
+
+contracts/
+ ├── MiniBank.sol
+ └── IMiniBank.sol
+test/
+ └── minibank.test.ts
+
+---
+
+6. What This Project Teaches
+
+1. Interfaces
+
+MiniBank implements IMiniBank, showing how contracts standardize APIs.
+Students see how external callers rely on strict function signatures.
+
+2. Storage vs Memory vs Calldata
+
+Mappings in storage, calldata arguments, and memory ABI buffers appear across the project.
+This teaches state persistence vs transient data.
+
+3. Low-Level Calls
+
+The .call() example shows manual ABI encoding and raw return bytes.
+Students understand why delegatecall and staticcall differ.
+
+4. Fallback & Receive
+
+MiniBank and Beneficiary show how ETH dispatch works.
+Tests will prove which function runs under each scenario.
